@@ -1,10 +1,12 @@
 {
   "name": "pd-cli",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "postinstall": "node -e \"console.log('\\x1b[36mNote: This is a PalDefender Beta client. Check for breaking changes at the GitHub repo.\\x1b[0m')\""
   },
   "author": "GlitchApotamus",
   "license": "MIT",
@@ -39,7 +41,7 @@
     "inquirer": "^9.3.8",
     "omelette": "^0.4.17",
     "ora": "^9.4.0",
-    "paldefender-rest-client": "paldefender-rest-client"
+    "paldefender-rest-client": "latest"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
