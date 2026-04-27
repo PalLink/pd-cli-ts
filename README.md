@@ -13,7 +13,7 @@ A high-performance, type-safe Command Line Interface for managing PalDefender RE
 Install the CLI globally via NPM to access the `pd-cli` command from anywhere on your system:
 
 ```bash
-npm install -g pd-cli
+npm install -g paldefender-cli
 ```
 
 ---
