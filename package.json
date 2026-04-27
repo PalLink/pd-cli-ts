@@ -1,0 +1,58 @@
+{
+  "name": "pd-cli",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "GlitchApotamus",
+  "license": "MIT",
+  "type": "module",
+  "description": "A high-performance CLI for managing PalDefender REST API servers with dynamic method discovery.",
+  "keywords": [
+    "palworld",
+    "paldefender",
+    "rest-api",
+    "cli",
+    "server-management",
+    "automation"
+  ],
+  "homepage": "https://github.com/PalLink/pd-cli-ts#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PalLink/pd-cli-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PalLink/pd-cli-ts/issues"
+  },
+  "maintainers": [
+    "GlitchApotamus"
+  ],
+  "dependencies": {
+    "@inquirer/prompts": "^8.4.2",
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "conf": "^15.1.0",
+    "dotenv": "^17.4.2",
+    "inquirer": "^9.3.8",
+    "omelette": "^0.4.17",
+    "ora": "^9.4.0",
+    "paldefender-rest-client": "paldefender-rest-client"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/omelette": "^0.4.5",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  },
+  "bin": {
+    "pd-cli": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}
