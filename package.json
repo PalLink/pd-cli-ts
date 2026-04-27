@@ -1,5 +1,5 @@
 {
-  "name": "pd-cli",
+  "name": "paldefender-cli",
   "version": "0.1.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,7 +50,7 @@
     "typescript": "^6.0.3"
   },
   "bin": {
-    "pd-cli": "./dist/index.js"
+    "pd-cli": "dist/index.js"
   },
   "files": [
     "dist",
