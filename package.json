@@ -6,6 +6,11 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
+    "bundle:js": "esbuild dist/cli.js --bundle --minify --platform=node --format=cjs --external:node:* --outfile=dist/bundle.js",
+    "bundle:blob": "node --experimental-sea-config sea-config.json",
+    "bundle:all": "./build-bins.sh",
+    "release:linux": "npm run build && npm run bundle:js && npm run bundle:blob && cp $(command -v node) pd-cli && npx postject pd-cli NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
+    "release:win": "npm run build && npm run bundle:js && npm run bundle:blob && wget https://nodejs.org/dist/v24.15.0/win-x64/node.exe -O pd-cli.exe && npx postject pd-cli.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
     "postinstall": "node -e \"console.log('\\x1b[36mNote: This is a PalDefender Beta client. Check for breaking changes at the GitHub repo.\\x1b[0m')\""
   },
   "author": "GlitchApotamus",
@@ -46,11 +51,13 @@
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/omelette": "^0.4.5",
+    "esbuild": "^0.28.0",
+    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   },
   "bin": {
-    "pd-cli": "dist/index.js"
+    "pd-cli": "dist/cli.js"
   },
   "files": [
     "dist",
