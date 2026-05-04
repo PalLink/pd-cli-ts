@@ -41,7 +41,7 @@
     "inquirer": "^9.3.8",
     "omelette": "^0.4.17",
     "ora": "^9.4.0",
-    "paldefender-rest-client": "latest"
+    "paldefender-rest-client": "^0.1.4"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
