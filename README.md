@@ -1,8 +1,8 @@
 # PalDefender CLI (`pd-cli`)
 
-[![version](https://img.shields.io/badge/version-0.0.1-cyan)](https://www.npmjs.com/package/pd-cli)
-[![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/GlitchApotamus/pd-cli/blob/main/LICENSE)
-[![status](https://img.shields.io/badge/status-active-blue)](#)
+[![version](https://img.shields.io/badge/version-0.1.2-cyan)](https://www.npmjs.com/package/paldefender-cli)
+[![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/PalLink/pd-cli-ts/blob/main/LICENSE)
+[![status](https://img.shields.io/badge/status-beta-orange)](#)
 
 A high-performance, type-safe Command Line Interface for managing PalDefender REST API servers. `pd-cli` features dynamic method discovery, allowing it to stay perfectly in sync with the core library automatically.
 
@@ -10,41 +10,41 @@ A high-performance, type-safe Command Line Interface for managing PalDefender RE
 
 ## 📦 Installation
 
-Install the CLI globally via NPM to access the `pd-cli` command from anywhere on your system:
+### Option 1: NPM (Recommended for Developers)
+Install the CLI globally to access the `pd-cli` command from anywhere:
 
 ```bash
 npm install -g paldefender-cli
 ```
 
+### Option 2: Standalone Binaries (GitHub Releases)
+If you don't have Node.js installed, download the pre-compiled binary for your OS from the [Releases](https://github.com/PalLink/pd-cli-ts/releases) page:
+- **Windows**: `pd-cli.exe`
+- **Linux**: `pd-cli`
+
 ---
 
 ## ⚙️ Configuration
 
-The CLI needs to know how to connect to your PalDefender server (Token, Host, and Port). 
+The CLI needs to connect to your PalDefender server. 
 
-### Interactive Setup (Recommended)
-Run the following command to securely save your credentials to a local config store. This eliminates the need for environment variables.
+### Interactive Setup
+Run this first to securely save your credentials. This avoids needing to set environment variables every session.
 
 ```bash
 pd-cli configure
 ```
-*The CLI will prompt you for your details and store them at:* `~/.config/pd-cli-nodejs/config.json` (Linux/macOS) or `%APPDATA%\pd-cli-nodejs` (Windows).
 
-### Manual Setup (Environment Variables)
-If you prefer not to use the config store, you can set the following variables:
-
-**Linux / macOS**
+### Connection Testing
+Verify your Host, Port, and Token are working correctly without fetching massive data:
 ```bash
-export PD_TOKEN="your_password"
-export PD_HOST="127.0.0.1"
-export PD_PORT="17993"
+pd-cli test-connection
 ```
 
-**Windows (PowerShell)**
-```powershell
-$env:PD_TOKEN = "your_password"
-$env:PD_HOST = "127.0.0.1"
-$env:PD_PORT = "17993"
+### Security
+To wipe all stored credentials from your machine:
+```bash
+pd-cli clear-config
 ```
 
 ---
@@ -56,45 +56,51 @@ $env:PD_PORT = "17993"
 ### Search for Players
 Find a player's Unique ID using their display name:
 ```bash
-# Assume a player name is "Player-1"
 # Partial search (case-insensitive)
 pd-cli findPlayersByPartialName "player"
-# Returns: {"players": [ { Player-1 } ]}
+
 # Exact match (case-sensitive)
-pd-cli findPlayerByName "Player-1"
-# Returns: { Player-1 } 
+pd-cli findPlayerByName "GlitchApotamus"
 ```
 
-### Managing Items
-Commands requiring arrays (like `givePals`) accept JSON strings. **Wrap JSON in single quotes (`'`)** to ensure the shell passes the data correctly.
+### Managing Items & Pals
+Commands requiring arrays (like `giveItems` or `givePals`) accept JSON strings. **Wrap JSON in single quotes (`'`)** to ensure the shell passes the data correctly.
 
 ```bash
+# Give items (Accepts GiveItem[])
+pd-cli giveItems "steam_76561198..." '[{"ItemID": "CopperIngot", "Count": 15}]'
+
 # Give a level 50 Anubis
-pd-cli givePals "76561198000000000" '[{"PalName": "Anubis", "Level": 50}]'
-
-# Give a Large Dark Egg
-pd-cli givePalEggs "76561198000000000" '[{"EggID": "PalEgg_Dark_05", "PalName": "Nyafia", "Level": 1}]'
-```
-
----
-
-## ❓ Discovery & Help
-
-To see every command available in the current version of the library:
-```bash
-pd-cli --help
-```
-
-To see the specific parameters required for a command:
-```bash
-pd-cli givePals --help
+pd-cli givePals "steam_76561198..." '[{"PalName": "Anubis", "Level": 50}]'
 ```
 
 ---
 
 ## 🚀 Key Features
 
-- **Dynamic Discovery**: New methods added to the `PalDefenderClient` appear in the CLI automatically without manual updates.
-- **Visual Feedback**: Real-time progress spinners for network requests.
-- **Auto-Parsing**: Automatically detects and parses JSON strings into JavaScript objects.
-- **Cross-Platform**: Tested on a Ubuntu server. ***Testing Requested on other machines***.
+- **Dynamic Discovery**: New methods added to the `PalDefenderClient` library appear in the CLI automatically.
+- **Smart 401 Handling**: Distinguishes between a server being offline and an invalid admin token.
+- **Persistent Storage**: Uses `conf` to store server details locally so you don't have to re-enter them.
+- **Cross-Platform Binaries**: Native executables available for Windows and Linux (no Node.js required).
+- **Visual Feedback**: Real-time progress spinners and formatted result boxes.
+
+---
+
+## ❓ Discovery & Help
+
+To see every command available in the current version:
+```bash
+pd-cli --help
+```
+
+To see the specific parameters required for a dynamic method:
+```bash
+pd-cli givePalEggs --help
+```
+
+---
+
+## 📜 License
+
+MIT © [PalLink](https://github.com/PalLink)
+```
