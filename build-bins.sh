@@ -32,8 +32,22 @@ echo "🪟 Building Windows Binary..."
 wget -q "https://nodejs.org/dist/$NODE_VERSION/win-x64/node.exe" -O pd-cli.exe
 npx postject pd-cli.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL"
 
+echo "🍎 Building macOS Binaries (ARM64 & x64)..."
+
+# ARM64 (Apple Silicon)
+wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-arm64.tar.gz"
+tar -xzf "node-$NODE_VERSION-darwin-arm64.tar.gz"
+cp "node-$NODE_VERSION-darwin-arm64/bin/node" pd-cli-macos-arm64
+npx postject pd-cli-macos-arm64 NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
+
+# x64 (Intel)
+wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-x64.tar.gz"
+tar -xzf "node-$NODE_VERSION-darwin-x64.tar.gz"
+cp "node-$NODE_VERSION-darwin-x64/bin/node" pd-cli-macos-x64
+npx postject pd-cli-macos-x64 NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
+
 # 6. Final Cleanup
 echo "🧹 Final Cleanup..."
-rm -rf node-linux.tar.xz node-v*-linux-x64 node-linux.tar.xz
+rm -rf node-linux.tar.xz node-v*-linux-x64 node-linux.tar.xz node-v*-darwin-*
 
 echo "✅ Done! Binaries created: pd-cli (Linux) and pd-cli.exe (Windows)"

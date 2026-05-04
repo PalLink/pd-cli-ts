@@ -8,6 +8,8 @@ import { input } from '@inquirer/prompts';
 import Conf from 'conf';
 import { PalDefenderClient } from 'paldefender-rest-client';
 
+declare const APP_VERSION: string;
+
 // Initialize persistent config storage
 const config = new Conf({ projectName: 'pd-cli' });
 
@@ -27,7 +29,7 @@ function getClient() {
 program
     .name('pd-cli')
     .description('PalDefender Management CLI')
-    .version('v0.1.3');
+    .version(APP_VERSION);
 
 // --- Branding ---
 const splashText = `
@@ -43,7 +45,7 @@ ${chalk.cyan.bold('╚═╝     ╚═════╝       ╚═════�
 
 program.addHelpText('before', boxen(splashText, {
     padding: 1, margin: 1, borderStyle: 'round', borderColor: 'cyan',
-    title: 'PD-CLI v0.1.3', titleAlignment: 'center'
+    title: `PD-CLI v${APP_VERSION}`, titleAlignment: 'center'
 }));
 
 // --- Persistence Command ---
@@ -159,53 +161,53 @@ methods.forEach((methodName) => {
             cmd.argument(`<${param}>`, `Parameter: ${param}`);
         });
 
-        // cmd.description(`Execute ${methodName} via API`)
-        //     .action(async (...args) => {
-        //         // Initialize the client ONLY when the command is called [cite: 317]
-        //         const client = getClient();
-        //         const method = (client as any)[methodName];
+        cmd.description(`Execute ${methodName} via API`)
+            .action(async (...args) => {
+                // Initialize the client ONLY when the command is called [cite: 317]
+                const client = getClient();
+                const method = (client as any)[methodName];
 
-        //         // The last argument is always the command object itself
-        //         const rawArgs = args.slice(0, args.length - 1);
+                // The last argument is always the command object itself
+                const rawArgs = args.slice(0, args.length - 1);
 
-        //         // Basic validation for missing arguments
-        //         if (rawArgs.length < method.length) {
-        //             console.error(chalk.yellow(`\n⚠️  Missing Arguments!`));
-        //             console.error(chalk.white(`   ${methodName} requires ${method.length} arguments.\n`));
-        //             console.log(cmd.helpInformation());
-        //             return;
-        //         }
+                // Basic validation for missing arguments
+                if (rawArgs.length < method.length) {
+                    console.error(chalk.yellow(`\n⚠️  Missing Arguments!`));
+                    console.error(chalk.white(`   ${methodName} requires ${method.length} arguments.\n`));
+                    console.log(cmd.helpInformation());
+                    return;
+                }
 
-        //         // Handle JSON inputs for complex types like ItemInput or GiveItem[]
-        //         const processedArgs = rawArgs.map(arg => {
-        //             if (typeof arg === 'string' && (arg.startsWith('[') || arg.startsWith('{'))) {
-        //                 try { return JSON.parse(arg); } catch { return arg; }
-        //             }
-        //             return arg;
-        //         });
+                // Handle JSON inputs for complex types like ItemInput or GiveItem[]
+                const processedArgs = rawArgs.map(arg => {
+                    if (typeof arg === 'string' && (arg.startsWith('[') || arg.startsWith('{'))) {
+                        try { return JSON.parse(arg); } catch { return arg; }
+                    }
+                    return arg;
+                });
 
-        //         const spinner = ora({
-        //             text: chalk.blue(`Requesting ${methodName}...`),
-        //             color: 'cyan'
-        //         }).start();
+                const spinner = ora({
+                    text: chalk.blue(`Requesting ${methodName}...`),
+                    color: 'cyan'
+                }).start();
 
-        //         try {
-        //             const result = await method.apply(client, processedArgs);
-        //             spinner.succeed(chalk.green(`API Success: ${methodName}`));
+                try {
+                    const result = await method.apply(client, processedArgs);
+                    spinner.succeed(chalk.green(`API Success: ${methodName}`));
 
-        //             console.log(boxen(JSON.stringify(result, null, 2), {
-        //                 padding: 0.5, borderColor: 'green', dimBorder: true
-        //             }));
+                    console.log(boxen(JSON.stringify(result, null, 2), {
+                        padding: 0.5, borderColor: 'green', dimBorder: true
+                    }));
 
-        //         } catch (error: any) {
-        //             spinner.fail(chalk.red(`API Failure: ${methodName}`));
-        //             console.error(chalk.red.bold(`\n✖ Error:`), chalk.white(error.message));
+                } catch (error: any) {
+                    spinner.fail(chalk.red(`API Failure: ${methodName}`));
+                    console.error(chalk.red.bold(`\n✖ Error:`), chalk.white(error.message));
 
-        //             if (error.message.includes('401')) {
-        //                 console.error(chalk.yellow('👉 Run "pd-cli configure" to update your credentials.'));
-        //             }
-        //         }
-        //     });
+                    if (error.message.includes('401')) {
+                        console.error(chalk.yellow('👉 Run "pd-cli configure" to update your credentials.'));
+                    }
+                }
+            });
     }
 });
 
