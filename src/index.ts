@@ -27,7 +27,7 @@ function getClient() {
 program
     .name('pd-cli')
     .description('PalDefender Management CLI')
-    .version('v0.1.2');
+    .version('v0.1.3');
 
 // --- Branding ---
 const splashText = `
@@ -43,7 +43,7 @@ ${chalk.cyan.bold('╚═╝     ╚═════╝       ╚═════�
 
 program.addHelpText('before', boxen(splashText, {
     padding: 1, margin: 1, borderStyle: 'round', borderColor: 'cyan',
-    title: 'PD-CLI v0.1.2', titleAlignment: 'center'
+    title: 'PD-CLI v0.1.3', titleAlignment: 'center'
 }));
 
 // --- Persistence Command ---
