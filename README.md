@@ -103,4 +103,3 @@ pd-cli givePalEggs --help
 ## 📜 License
 
 MIT © [PalLink](https://github.com/PalLink)
-```
