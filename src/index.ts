@@ -17,8 +17,6 @@ const program = new Command();
 const _B = "QWRtaW4gVXRpbGl0eSBieSBHbGl0Y2hBcG90YW11cw==";
 const getAuthor = () => Buffer.from(_B, 'base64').toString();
 
-const _CHECK = "HbGlitchApotamus";
-
 function validateIntegrity() {
     const brand = getAuthor();
     if (!brand.includes("GlitchApotamus") || brand.length < 10) {
@@ -32,8 +30,35 @@ function getClient() {
     const token = config.get('token') as string;
     const host = config.get('host') as string;
     const port = config.get('port') as string;
-    return new PalDefenderClient({token, host, port: parseInt(port)});
+
+    if (!token || !host || !port) {
+        console.error(chalk.yellow('\n⚠ Client not configured. Run "pd-cli configure" first.\n'));
+        process.exit(1);
+    }
+
+    return new PalDefenderClient({ token, host, port: parseInt(port) });
 }
+
+const tryParseJson = (input: string | string[]) => {
+    const str = Array.isArray(input) ? input.join(' ') : input;
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        return str;
+    }
+};
+
+const handleAction = async (methodName: string, action: () => Promise<any>) => {
+    const spinner = ora({ text: `Executing ${methodName}...`, color: 'cyan' }).start();
+    try {
+        const result = await action();
+        spinner.succeed(`API Success: ${methodName}`);
+        console.log(boxen(JSON.stringify(result, null, 2), { padding: 0.5, borderColor: 'green' }));
+    } catch (error: any) {
+        spinner.fail(`API Failure: ${methodName}`);
+        console.error(chalk.red(`✖ Error: ${error.message}`));
+    }
+};
 
 program
     .name('pd-cli')
@@ -64,7 +89,7 @@ program
 
         const token = await input({
             message: 'Enter your PalDefender Admin Token:',
-            default: (config.get('token') as string) || process.env.PD_TOKEN || "0"
+            default: (config.get('token') as string) || process.env.PD_TOKEN || ""
         });
 
         const host = await input({
@@ -74,7 +99,7 @@ program
 
         const port = await input({
             message: 'Enter Server Port:',
-            default: (config.get('port') as string) || process.env.PD_PORT || '8212'
+            default: (config.get('port') as string) || process.env.PD_PORT || '17993'
         });
 
         config.set('token', token);
@@ -84,22 +109,20 @@ program
         console.log(chalk.green('\n✔ Configuration saved successfully!'));
         console.log(chalk.grey(`Stored at: ${config.path}\n`));
     });
-// --- Configuration Management ---
+
 program
     .command('clear-config')
     .description('Remove all saved server connection details')
     .action(() => {
         const spinner = ora('Clearing local configuration...').start();
         try {
-            config.clear(); // 
+            config.clear();
             spinner.succeed(chalk.green('Local configuration wiped successfully.'));
-            console.log(chalk.grey('You will need to run "pd-cli configure" before making new requests.'));
         } catch (error: any) {
             spinner.fail(chalk.red('Failed to clear configuration.'));
-            console.error(chalk.white(error.message));
         }
     });
-// --- Connection Health Check ---
+
 program
     .command('test-connection')
     .description('Verify server connectivity and authentication token')
@@ -113,8 +136,7 @@ program
             const testClient = getClient();
             const ver = await testClient.version();
 
-            // Case 1: 200 OK - Everything is perfect
-            spinner.succeed(chalk.green('Connection Successful! (Authenticated)'));
+            spinner.succeed(chalk.green('Connection Successful!'));
 
             console.log(boxen(
                 `${chalk.white.bold('PalDefender Version:')} ${chalk.cyan(ver.version_str_long)}\n` +
@@ -123,99 +145,182 @@ program
             ));
 
         } catch (error: any) {
-            // Check if it's a 401 Unauthorized
-            if (error.message.includes('401')) {
-                // Case 2: 401 Unauthorized - Connection works, but token is bad
-                spinner.warn(chalk.yellow('Connection Successful! (Unauthorized)'));
+            spinner.fail(chalk.red(`Connection Failed: ${error.message}`));
 
-                console.log(boxen(
-                    `${chalk.red.bold('⚠ Authentication Failed')}\n\n` +
-                    `${chalk.white('The server is reachable at ')}${chalk.cyan(config.get('host'))}${chalk.white(', but your token is invalid.')}\n\n` +
-                    `${chalk.yellow('👉 Run "pd-cli configure" to update your credentials.')}`,
-                    { padding: 1, borderStyle: 'round', borderColor: 'yellow' }
-                ));
-            } else {
-                // Case 3: Any other error (Server down, Timeout, 500, etc.)
-                spinner.fail(chalk.red('Connection Failed!'));
-                console.error(chalk.red.bold('\n✖ Error:'), chalk.white(error.message));
-                console.error(chalk.yellow('\n👉 Ensure your PalDefender server is running and the Host/Port are correct.'));
+            if (error.message.includes('status 0')) {
+                console.log(chalk.yellow('\n👉 Note: ') + chalk.white('Ensure your Palworld server is online and Paldefender is installed correctly.'));
+                console.log(chalk.grey('Check that your Host/IP and Port are correct in "pd-cli configure".\n'));
+            }
+            else if (error.message.includes('401')) {
+                console.log(chalk.yellow('\n👉 Note: ') + chalk.white('Authentication failed. Please verify your Admin Token is correct.'));
             }
         }
-        // No need for spinner.stop() here as succeed/warn/fail handles it
     });
-// --- Dynamic Library Commands ---
-function getParamNames(func: Function): string[] {
-    const fnStr = func.toString();
-    const result = fnStr.slice(fnStr.indexOf('(') + 1, fnStr.indexOf(')')).match(/([^\s,]+)/g);
-    return result === null ? [] : result;
-}
 
-const methods = Object.getOwnPropertyNames(PalDefenderClient.prototype);
+program
+    .command('getVersion')
+    .description('Get detailed version info for the server and anticheat.')
+    .action(() => handleAction('getVersion', () => getClient().getVersion()));
 
-methods.forEach((methodName) => {
-    // Skip constructor and internal helper methods
-    if (methodName === 'constructor' || methodName.startsWith('_')) return;
+program
+    .command('getPlayers')
+    .description('List all players currently or previously registered on the server.')
+    .action(() => handleAction('getPlayers', () => getClient().getPlayers()));
 
-    // Use the prototype to discover parameters without instantiating the client yet
-    const prototypeMethod = (PalDefenderClient.prototype as any)[methodName];
+program
+    .command('getGuilds')
+    .description('List all guilds and groups registered on the server.')
+    .action(() => handleAction('getGuilds', () => getClient().getGuilds()));
 
-    if (typeof prototypeMethod === 'function') {
-        const cmd = program.command(methodName);
-        const params = getParamNames(prototypeMethod);
+program
+    .command('getPlayer')
+    .description('Retrieve a detailed profile for a specific player.')
+    .argument('<id>', 'The PlayerUID, SteamID, or UserID')
+    .action((id) => handleAction('getPlayer', () => getClient().getPlayer(id)));
 
-        // Map method arguments to CLI arguments
-        params.forEach(param => {
-            cmd.argument(`<${param}>`, `Parameter: ${param}`);
-        });
+program
+    .command('getPals')
+    .description('List all Pals (Team, Palbox, and Base) owned by a player.')
+    .argument('<playerId>', 'The PlayerUID or SteamID')
+    .action((id) => handleAction('getPals', () => getClient().getPals(id)));
 
-        cmd.description(`Execute ${methodName} via API`)
-            .action(async (...args) => {
-                // Initialize the client ONLY when the command is called [cite: 317]
-                const client = getClient();
-                const method = (client as any)[methodName];
+program
+    .command('getItems')
+    .description('View a player\'s full inventory including weapons and armor.')
+    .argument('<playerId>', 'The PlayerUID or SteamID')
+    .action((id) => handleAction('getItems', () => getClient().getItems(id)));
 
-                // The last argument is always the command object itself
-                const rawArgs = args.slice(0, args.length - 1);
+program
+    .command('getTechs')
+    .description('List all researchable and unlocked technology IDs for a player.')
+    .argument('<playerId>', 'The PlayerUID or SteamID')
+    .action((id) => handleAction('getTechs', () => getClient().getTechs(id)));
 
-                // Basic validation for missing arguments
-                if (rawArgs.length < method.length) {
-                    console.error(chalk.yellow(`\n⚠️  Missing Arguments!`));
-                    console.error(chalk.white(`   ${methodName} requires ${method.length} arguments.\n`));
-                    console.log(cmd.helpInformation());
-                    return;
-                }
+program
+    .command('getProgression')
+    .description('View player stats, capture history, and boss activity.')
+    .argument('<playerId>', 'The PlayerUID or SteamID')
+    .action((id) => handleAction('getProgression', () => getClient().getProgression(id)));
 
-                // Handle JSON inputs for complex types like ItemInput or GiveItem[]
-                const processedArgs = rawArgs.map(arg => {
-                    if (typeof arg === 'string' && (arg.startsWith('[') || arg.startsWith('{'))) {
-                        try { return JSON.parse(arg); } catch { return arg; }
-                    }
-                    return arg;
-                });
+program
+    .command('findPlayerByName')
+    .description('Search for a player by their exact in-game name (Case Sensitive).')
+    .argument('<name>', 'The exact player name')
+    .action((name) => handleAction('findPlayerByName', () => getClient().findPlayerByName(name)));
 
-                const spinner = ora({
-                    text: chalk.blue(`Requesting ${methodName}...`),
-                    color: 'cyan'
-                }).start();
+program
+    .command('findPlayersByPartialName')
+    .description('Search for players using a name fragment.')
+    .argument('<part>', 'Any part of the player name')
+    .action((part) => handleAction('findPlayersByPartialName', () => getClient().findPlayersByPartialName(part)));
 
-                try {
-                    const result = await method.apply(client, processedArgs);
-                    spinner.succeed(chalk.green(`API Success: ${methodName}`));
+program
+    .command('getGuild')
+    .description('Retrieve detailed info and item storage for a specific guild.')
+    .argument('<guildId>', 'The unique Guild GUID')
+    .action((id) => handleAction('getGuild', () => getClient().getGuild(id)));
 
-                    console.log(boxen(JSON.stringify(result, null, 2), {
-                        padding: 0.5, borderColor: 'green', dimBorder: true
-                    }));
+program
+    .command('deleteBase')
+    .description('Immediately delete a base camp from the world.')
+    .argument('<baseId>', 'The unique Base GUID')
+    .action((id) => handleAction('deleteBase', () => getClient().deleteBase(id)));
 
-                } catch (error: any) {
-                    spinner.fail(chalk.red(`API Failure: ${methodName}`));
-                    console.error(chalk.red.bold(`\n✖ Error:`), chalk.white(error.message));
+program
+    .command('giveItems')
+    .description('Grant items. Supports names (Stone Wood) or JSON array.')
+    .argument('<playerId>', 'Target Player ID')
+    .argument('<items...>', 'Item Names OR [{"ItemID":"Wood","Count":10}]')
+    .action((playerId, items) => handleAction('giveItems', () => {
+        const inputStr = items.join(' ');
+        try {
+            const parsed = JSON.parse(inputStr);
+            if (Array.isArray(parsed)) return getClient().giveItems(playerId, ...parsed);
+        } catch (e) { }
+        return getClient().giveItems(playerId, ...items);
+    }));
 
-                    if (error.message.includes('401')) {
-                        console.error(chalk.yellow('👉 Run "pd-cli configure" to update your credentials.'));
-                    }
-                }
-            });
-    }
-});
+program
+    .command('givePals')
+    .description('Grant Pals. Supports names (Lamball) or JSON object.')
+    .argument('<playerId>', 'Target Player ID')
+    .argument('<pals...>', 'Pal Names OR {"PalName":"Anubis","Level":1}')
+    .action((playerId, pals) => handleAction('givePals', () => {
+        const inputStr = pals.join(' ');
+        try {
+            const parsed = JSON.parse(inputStr);
+            return getClient().givePals(playerId, parsed);
+        } catch (e) { }
+        return getClient().givePals(playerId, ...pals);
+    }));
 
+program
+    .command('givePalEggs')
+    .description('Grant Eggs. Supports IDs or JSON array.')
+    .argument('<playerId>', 'Target Player ID')
+    .argument('<eggs...>', 'Egg IDs OR ["PalEgg_Dark_01"]')
+    .action((playerId, eggs) => handleAction('givePalEggs', () => {
+        const inputStr = eggs.join(' ');
+        try {
+            const parsed = JSON.parse(inputStr);
+            if (Array.isArray(parsed)) return getClient().givePalEggs(playerId, ...parsed);
+        } catch (e) { }
+        return getClient().givePalEggs(playerId, ...eggs);
+    }));
+
+program
+    .command('giveProgression')
+    .description('Update player progression stats (Lifmunks, EXP, Tech Points).')
+    .argument('<playerId>', 'SteamID or PlayerUID')
+    .argument('<json...>', 'JSON: {"exp": 5000, "technologyPoints": 10}')
+    .addHelpText('after', `
+The object can contain any of these keys:
+  - lifmunks (Number)
+  - exp (Number)
+  - technologyPoints (Number)
+  - ancientTechnologyPoints (Number)
+
+Example:
+  $ pd-cli giveProgression "PLAYER_ID" '{"exp": 10000, "lifmunks": 10}'
+    `)
+    .action((playerId, jsonParts) => handleAction('giveProgression', () => {
+        const inputStr = jsonParts.join(' ');
+        const data = tryParseJson(inputStr);
+
+        if (typeof data !== 'object' || data === null) {
+            throw new Error('Progression data must be a valid JSON object. Example: \'{"exp": 100}\'');
+        }
+
+        return getClient().giveProgression(playerId, data);
+    }));
+
+program
+    .command('giveRecipeMaterials')
+    .description('Grant all materials needed to craft a specific item.')
+    .argument('<playerId>', 'SteamID or PlayerUID')
+    .argument('<product>', 'Internal Item Name (e.g., PalSphere)')
+    .argument('<quantity>', 'How many sets of materials to give', (val) => parseInt(val))
+    .action((id, prod, qty) => handleAction('giveRecipeMaterials', () => {
+        return getClient().giveRecipeMaterials(id, prod, qty);
+    }));
+
+program
+    .command('learnTech')
+    .description('Instantly unlock a specific technology ID.')
+    .argument('<playerId>', 'SteamID or PlayerUID')
+    .argument('<techId>', 'Internal Tech ID (e.g., Unlock_Sphere_Tier_03)')
+    .action((id, tech) => handleAction('learnTech', () => getClient().learnTech(id, tech)));
+
+program
+    .command('forgetTech')
+    .description('Lock a technology ID, or use "All" to reset the entire tree.')
+    .argument('<playerId>', 'SteamID or PlayerUID')
+    .argument('<techId>', 'Internal Tech ID or "All"')
+    .action((id, tech) => handleAction('forgetTech', () => getClient().forgetTech(id, tech)));
+
+program.addHelpText('after', `
+${chalk.yellow.bold('Note on JSON Arguments:')}
+When passing JSON (for admin commands), wrap the entire block in single quotes:
+  ${chalk.cyan("pd-cli admin giveProgression \"ID\" '{\"exp\": 100}'")}
+`);
 export default program;
