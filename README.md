@@ -1,6 +1,6 @@
 # PalDefender CLI (`pd-cli`)
 
-[![version](https://img.shields.io/badge/version-0.1.2-cyan)](https://www.npmjs.com/package/paldefender-cli)
+[![version](https://img.shields.io/npm/v/paldefender-cli?color=cyan)](https://www.npmjs.com/package/paldefender-cli)
 [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/PalLink/pd-cli-ts/blob/main/LICENSE)
 [![status](https://img.shields.io/badge/status-beta-orange)](#)
 
