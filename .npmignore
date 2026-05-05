@@ -1,7 +1,5 @@
 src/
 tsconfig.json
-node*
+node_modules/
 package-lock.json
-pd-cli*
-*.blob
-upload-release.sh
+build/

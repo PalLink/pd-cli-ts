@@ -1,6 +1,4 @@
 package-lock.json
 dist/
-pd-cli*
-*.blob
-upload-release.sh
-node*
+node_modules/
+build/
