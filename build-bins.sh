@@ -1,69 +1,70 @@
 #!/bin/bash
 
-# --- Configuration ---
 NODE_VERSION="v24.14.1"
 SENTINEL="NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2"
 VERSION=$(jq -r '.version' package.json)
+BUILD_DIR="./build"
 
-echo "🚀 Starting PalDefender CLI Build Process..."
+echo "🚀 Starting PalDefender CLI Build Process for v$VERSION..."
 
-# 1. Clean up old build artifacts to ensure no 'dirty' files remain
-echo "🧹 Cleaning workspace..."
-rm -rf dist sea-prep.blob pd-cli pd-cli.exe node-linux.tar.xz node-win.exe node-v*-linux-x64
+echo "🧹 Preparing build directory..."
+rm -rf $BUILD_DIR
+mkdir -p $BUILD_DIR
 
-# 2. Build and Bundle JS (CJS format to avoid ESM issues in SEA)
-echo "📦 Building and Bundling JS..."
+echo "📦 Building and Bundling..."
 npm run build
 npx esbuild dist/cli.js --bundle --minify --platform=node --format=cjs \
-  --external:node:* \
-  --define:APP_VERSION="\"$VERSION\"" \
-  --outfile=dist/bundle.js
+    --target=es2020 \
+    --external:node:* \
+    --define:APP_VERSION="\"$VERSION\"" \
+    --outfile=$BUILD_DIR/bundle.js
 
-echo "🛡️  Mangling Binary (Level 3 Obfuscation)..."
-npx javascript-obfuscator dist/bundle.js --output dist/bundle.js \
+npx javascript-obfuscator $BUILD_DIR/bundle.js --output $BUILD_DIR/bundle.js \
     --compact true \
     --self-defending true \
+    --target node \
+    --rename-globals false \
     --string-array true \
     --string-array-encoding 'base64' \
     --string-array-threshold 1 \
-    --dead-code-injection true \
-    --dead-code-injection-threshold 0.4 \
-    --rename-globals true \
-    --identifier-names-generator 'hexadecimal'
+    --transform-object-keys false \
+    --rename-properties false > /dev/null 2>&1
 
-# 3. Generate the SEA Blob
+if [ $? -eq 0 ]; then
+    echo "✅ Obfuscation successful."
+else
+    echo "❌ Obfuscation failed."
+    exit 1
+fi
+
 echo "🧬 Generating SEA Blob..."
-node --experimental-sea-config sea-config.json
+echo "{\"main\": \"$BUILD_DIR/bundle.js\", \"output\": \"$BUILD_DIR/sea-prep.blob\"}" > $BUILD_DIR/sea-config.json
+node --experimental-sea-config $BUILD_DIR/sea-config.json
 
-# 4. Build Linux Binary
 echo "🐧 Building Linux Binary..."
-wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -O node-linux.tar.xz
-tar -xJf node-linux.tar.xz
-cp "node-$NODE_VERSION-linux-x64/bin/node" pd-cli
-npx postject pd-cli NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL"
-chmod +x pd-cli
+wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.xz" -P $BUILD_DIR
+tar -xJf $BUILD_DIR/node-$NODE_VERSION-linux-x64.tar.xz -C $BUILD_DIR
+cp "$BUILD_DIR/node-$NODE_VERSION-linux-x64/bin/node" $BUILD_DIR/pd-cli
+npx postject $BUILD_DIR/pd-cli NODE_SEA_BLOB $BUILD_DIR/sea-prep.blob --sentinel-fuse "$SENTINEL"
+chmod +x $BUILD_DIR/pd-cli
 
-# 5. Build Windows Binary
 echo "🪟 Building Windows Binary..."
-wget -q "https://nodejs.org/dist/$NODE_VERSION/win-x64/node.exe" -O pd-cli.exe
-npx postject pd-cli.exe NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL"
+wget -q "https://nodejs.org/dist/$NODE_VERSION/win-x64/node.exe" -O $BUILD_DIR/pd-cli.exe
+npx postject $BUILD_DIR/pd-cli.exe NODE_SEA_BLOB $BUILD_DIR/sea-prep.blob --sentinel-fuse "$SENTINEL"
 
-echo "🍎 Building macOS Binaries (ARM64 & x64)..."
+echo "🍎 Building macOS Binaries..."
 
-# ARM64 (Apple Silicon)
-wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-arm64.tar.gz"
-tar -xzf "node-$NODE_VERSION-darwin-arm64.tar.gz"
-cp "node-$NODE_VERSION-darwin-arm64/bin/node" pd-cli-macos-arm64
-npx postject pd-cli-macos-arm64 NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
+wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-arm64.tar.gz" -P $BUILD_DIR
+tar -xzf "$BUILD_DIR/node-$NODE_VERSION-darwin-arm64.tar.gz" -C $BUILD_DIR
+cp "$BUILD_DIR/node-$NODE_VERSION-darwin-arm64/bin/node" $BUILD_DIR/pd-cli-macos-arm64
+npx postject $BUILD_DIR/pd-cli-macos-arm64 NODE_SEA_BLOB $BUILD_DIR/sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
 
-# x64 (Intel)
-wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-x64.tar.gz"
-tar -xzf "node-$NODE_VERSION-darwin-x64.tar.gz"
-cp "node-$NODE_VERSION-darwin-x64/bin/node" pd-cli-macos-x64
-npx postject pd-cli-macos-x64 NODE_SEA_BLOB sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
+wget -q "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-darwin-x64.tar.gz" -P $BUILD_DIR
+tar -xzf "$BUILD_DIR/node-$NODE_VERSION-darwin-x64.tar.gz" -C $BUILD_DIR
+cp "$BUILD_DIR/node-$NODE_VERSION-darwin-x64/bin/node" $BUILD_DIR/pd-cli-macos-x64
+npx postject $BUILD_DIR/pd-cli-macos-x64 NODE_SEA_BLOB $BUILD_DIR/sea-prep.blob --sentinel-fuse "$SENTINEL" --macho-segment-name NODE_SEA
 
-# 6. Final Cleanup
 echo "🧹 Final Cleanup..."
-rm -rf node-linux.tar.xz node-v*-linux-x64 node-linux.tar.xz node-v*-darwin-*
+rm -rf $BUILD_DIR/node-v* $BUILD_DIR/*.tar.xz $BUILD_DIR/*.tar.gz $BUILD_DIR/sea-config.json $BUILD_DIR/sea-prep.blob
 
-echo "✅ Done! Binaries created: pd-cli (Linux) and pd-cli.exe (Windows)"
+echo "✅ Done! Binaries are located in the $BUILD_DIR folder."
