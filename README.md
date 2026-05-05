@@ -21,6 +21,8 @@ npm install -g paldefender-cli
 If you don't have Node.js installed, download the pre-compiled binary for your OS from the [Releases](https://github.com/PalLink/pd-cli-ts/releases) page:
 - **Windows**: `pd-cli.exe`
 - **Linux**: `pd-cli`
+- **MacOS (Silicon)**: `pd-cli-macos-arm64`
+- **MacOS (Intel)**: `pd-cli-macos-x64`
 
 ---
 
@@ -68,6 +70,8 @@ Commands requiring arrays (like `giveItems` or `givePals`) accept JSON strings. 
 
 ```bash
 # Give items (Accepts GiveItem[])
+pd-cli giveItems "steam_76561198..." 'CopperIngot'
+pd-cli giveItems "steam_76561198..." '[{"ItemID": "CopperIngot", "Count": 15}]'
 pd-cli giveItems "steam_76561198..." '[{"ItemID": "CopperIngot", "Count": 15}]'
 
 # Give a level 50 Anubis
