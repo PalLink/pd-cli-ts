@@ -10,20 +10,29 @@ import { PalDefenderClient } from 'paldefender-rest-client';
 
 declare const APP_VERSION: string;
 
-// Initialize persistent config storage
 const config = new Conf({ projectName: 'pd-cli' });
 const version = APP_VERSION;
 const program = new Command();
 
-/**
- * Setup the API Client using Config Store or Env Variables
- */
+const _B = "QWRtaW4gVXRpbGl0eSBieSBHbGl0Y2hBcG90YW11cw==";
+const getAuthor = () => Buffer.from(_B, 'base64').toString();
+
+const _CHECK = "HbGlitchApotamus";
+
+function validateIntegrity() {
+    const brand = getAuthor();
+    if (!brand.includes("GlitchApotamus") || brand.length < 10) {
+        console.error(chalk.red.bold("\n🚨 INTEGRITY ERROR: This binary has been tampered with and is no longer functional."));
+        process.exit(1);
+    }
+}
+
 function getClient() {
-    return new PalDefenderClient({
-        token: (config.get('token') as string) || process.env.PD_TOKEN!,
-        host: (config.get('host') as string) || process.env.PD_HOST || '127.0.0.1',
-        port: Number((config.get('port') as string) || process.env.PD_PORT || 17993)
-    });
+    validateIntegrity();
+    const token = config.get('token') as string;
+    const host = config.get('host') as string;
+    const port = config.get('port') as string;
+    return new PalDefenderClient({token, host, port: parseInt(port)});
 }
 
 program
@@ -31,7 +40,6 @@ program
     .description('PalDefender Management CLI')
     .version(version);
 
-// --- Branding ---
 const splashText = `
 ${chalk.cyan.bold('██████╗ ██████╗       ██████╗██╗     ██╗')}
 ${chalk.cyan.bold('██╔══██╗██╔══██╗     ██╔════╝██║     ██║')}
@@ -40,7 +48,7 @@ ${chalk.cyan.bold('██╔═══╝ ██║  ██║     ██║     
 ${chalk.cyan.bold('██║     ██████╔╝     ╚██████╗███████╗██║')}
 ${chalk.cyan.bold('╚═╝     ╚═════╝       ╚═════╝╚══════╝╚═╝')}
 
-      ${chalk.grey('Admin Utility by GlitchApotamus')}
+      ${chalk.grey(getAuthor())}
 `;
 
 program.addHelpText('before', boxen(splashText, {
@@ -48,7 +56,6 @@ program.addHelpText('before', boxen(splashText, {
     title: `PD-CLI v${version}`, titleAlignment: 'center'
 }));
 
-// --- Persistence Command ---
 program
     .command('configure')
     .description('Interactively save your server connection details')

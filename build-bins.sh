@@ -19,6 +19,18 @@ npx esbuild dist/cli.js --bundle --minify --platform=node --format=cjs \
   --define:APP_VERSION="\"$VERSION\"" \
   --outfile=dist/bundle.js
 
+echo "🛡️  Mangling Binary (Level 3 Obfuscation)..."
+npx javascript-obfuscator dist/bundle.js --output dist/bundle.js \
+    --compact true \
+    --self-defending true \
+    --string-array true \
+    --string-array-encoding 'base64' \
+    --string-array-threshold 1 \
+    --dead-code-injection true \
+    --dead-code-injection-threshold 0.4 \
+    --rename-globals true \
+    --identifier-names-generator 'hexadecimal'
+
 # 3. Generate the SEA Blob
 echo "🧬 Generating SEA Blob..."
 node --experimental-sea-config sea-config.json
