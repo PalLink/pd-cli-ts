@@ -12,7 +12,7 @@ declare const APP_VERSION: string;
 
 // Initialize persistent config storage
 const config = new Conf({ projectName: 'pd-cli' });
-
+const version = APP_VERSION;
 const program = new Command();
 
 /**
@@ -29,7 +29,7 @@ function getClient() {
 program
     .name('pd-cli')
     .description('PalDefender Management CLI')
-    .version(APP_VERSION);
+    .version(version);
 
 // --- Branding ---
 const splashText = `
@@ -45,7 +45,7 @@ ${chalk.cyan.bold('╚═╝     ╚═════╝       ╚═════�
 
 program.addHelpText('before', boxen(splashText, {
     padding: 1, margin: 1, borderStyle: 'round', borderColor: 'cyan',
-    title: `PD-CLI v${APP_VERSION}`, titleAlignment: 'center'
+    title: `PD-CLI v${version}`, titleAlignment: 'center'
 }));
 
 // --- Persistence Command ---
