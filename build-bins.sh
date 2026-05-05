@@ -3,6 +3,7 @@
 # --- Configuration ---
 NODE_VERSION="v24.14.1"
 SENTINEL="NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2"
+VERSION=$(jq -r '.version' package.json)
 
 echo "🚀 Starting PalDefender CLI Build Process..."
 
@@ -13,7 +14,10 @@ rm -rf dist sea-prep.blob pd-cli pd-cli.exe node-linux.tar.xz node-win.exe node-
 # 2. Build and Bundle JS (CJS format to avoid ESM issues in SEA)
 echo "📦 Building and Bundling JS..."
 npm run build
-npx esbuild dist/cli.js --bundle --minify --platform=node --format=cjs --external:node:* --outfile=dist/bundle.js
+npx esbuild dist/cli.js --bundle --minify --platform=node --format=cjs \
+  --external:node:* \
+  --define:APP_VERSION="\"$VERSION\"" \
+  --outfile=dist/bundle.js
 
 # 3. Generate the SEA Blob
 echo "🧬 Generating SEA Blob..."
