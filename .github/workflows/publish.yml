@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # Required for Trusted Publishing OIDC
+      id-token: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,5 +27,4 @@ jobs:
         run: npm run build
 
       - name: Publish to NPM
-        # No NPM_TOKEN needed anymore!
         run: npm publish --access public --provenance
