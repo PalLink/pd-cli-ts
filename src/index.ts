@@ -41,10 +41,12 @@ function getClient() {
 
 const tryParseJson = (input: string | string[]) => {
     const str = Array.isArray(input) ? input.join(' ') : input;
+    const cleanStr = str.trim().replace(/^'|'$/g, '');
+
     try {
-        return JSON.parse(str);
+        return JSON.parse(cleanStr);
     } catch (e) {
-        return str;
+        return cleanStr;
     }
 };
 
@@ -57,6 +59,11 @@ const handleAction = async (methodName: string, action: () => Promise<any>) => {
     } catch (error: any) {
         spinner.fail(`API Failure: ${methodName}`);
         console.error(chalk.red(`✖ Error: ${error.message}`));
+
+        if (error.message.includes('ItemID')) {
+            console.log(chalk.yellow('\n💡 CMD Hint: ') + chalk.white('On Windows CMD, wrap JSON in double quotes and escape internal quotes:'));
+            console.log(chalk.grey('Example: "[{\\"ItemID\\": \\"Stone\\", \\"Count\\": 1}]"\n'));
+        }
     }
 };
 
@@ -228,95 +235,123 @@ program
 
 program
     .command('giveItems')
-    .description('Grant items. Supports names (Stone Wood) or JSON array.')
-    .argument('<playerId>', 'Target Player ID')
-    .argument('<items...>', 'Item Names OR [{"ItemID":"Wood","Count":10}]')
-    .action((playerId, items) => handleAction('giveItems', () => {
-        const inputStr = items.join(' ');
-        try {
-            const parsed = JSON.parse(inputStr);
-            if (Array.isArray(parsed)) return getClient().giveItems(playerId, ...parsed);
-        } catch (e) { }
-        return getClient().giveItems(playerId, ...items);
+    .description('Grant items to a player. Supports name lists or JSON arrays.')
+    .argument('<playerId>', 'Target Player UID or SteamID')
+    .argument('<items...>', 'Item names OR JSON: [{"ItemId":"Stone","Count":1}]')
+    .addHelpText('after', `
+Examples:
+  List: pd-cli giveItems "ID" Stone Wood
+  JSON (CMD): pd-cli giveItems "ID" "[{\\"ItemId\\": \\"Stone\\", \\"Count\\": 10}]"
+  JSON (PS/Linux): pd-cli giveItems "ID" '[{"ItemId": "Stone", "Count": 10}]'
+    `)
+    .action((playerId, itemsParts) => handleAction('giveItems', () => {
+        const data = tryParseJson(itemsParts);
+        return Array.isArray(data)
+            ? getClient().giveItems(playerId, ...data)
+            : getClient().giveItems(playerId, ...itemsParts);
     }));
 
 program
     .command('givePals')
-    .description('Grant Pals. Supports names (Lamball) or JSON object.')
-    .argument('<playerId>', 'Target Player ID')
-    .argument('<pals...>', 'Pal Names OR {"PalName":"Anubis","Level":1}')
-    .action((playerId, pals) => handleAction('givePals', () => {
-        const inputStr = pals.join(' ');
-        try {
-            const parsed = JSON.parse(inputStr);
-            return getClient().givePals(playerId, parsed);
-        } catch (e) { }
-        return getClient().givePals(playerId, ...pals);
+    .description('Grant Pals to a player. Supports name lists or JSON objects.')
+    .argument('<playerId>', 'Target Player UID or SteamID')
+    .argument('<pals...>', 'Pal names OR JSON: {"PalName":"Anubis","Level":1}')
+    .addHelpText('after', `
+Examples:
+  List: pd-cli givePals "ID" Lamball Anubis
+  JSON (CMD): pd-cli givePals "ID" "{\\"PalName\\": \\"Anubis\\", \\"Level\\": 50}"
+  JSON (PS/Linux): pd-cli givePals "ID" '{"PalName": "Anubis", "Level": 50}'
+    `)
+    .action((playerId, palsParts) => handleAction('givePals', () => {
+        const data = tryParseJson(palsParts);
+        return (typeof data === 'object' && data !== null)
+            ? getClient().givePals(playerId, data)
+            : getClient().givePals(playerId, ...palsParts);
     }));
 
 program
     .command('givePalEggs')
-    .description('Grant Eggs. Supports IDs or JSON array.')
-    .argument('<playerId>', 'Target Player ID')
-    .argument('<eggs...>', 'Egg IDs OR ["PalEgg_Dark_01"]')
-    .action((playerId, eggs) => handleAction('givePalEggs', () => {
-        const inputStr = eggs.join(' ');
-        try {
-            const parsed = JSON.parse(inputStr);
-            if (Array.isArray(parsed)) return getClient().givePalEggs(playerId, ...parsed);
-        } catch (e) { }
-        return getClient().givePalEggs(playerId, ...eggs);
+    .description('Grant Pal Eggs. Supports ID lists or JSON arrays.')
+    .argument('<playerId>', 'Target Player UID or SteamID')
+    .argument('<eggs...>', 'Egg IDs OR JSON: ["PalEgg_Dark_01"]')
+    .addHelpText('after', `
+Examples:
+  List: pd-cli givePalEggs "ID" PalEgg_Dark_01 PalEgg_Fire_01
+  JSON (CMD): pd-cli givePalEggs "ID" "[\\"PalEgg_Dark_01\\"]"
+  JSON (PS/Linux): pd-cli givePalEggs "ID" '["PalEgg_Dark_01"]'
+    `)
+    .action((playerId, eggsParts) => handleAction('givePalEggs', () => {
+        const data = tryParseJson(eggsParts);
+        return Array.isArray(data)
+            ? getClient().givePalEggs(playerId, ...data)
+            : getClient().givePalEggs(playerId, ...eggsParts);
     }));
 
 program
     .command('giveProgression')
-    .description('Update player progression stats (Lifmunks, EXP, Tech Points).')
-    .argument('<playerId>', 'SteamID or PlayerUID')
-    .argument('<json...>', 'JSON: {"exp": 5000, "technologyPoints": 10}')
+    .description('Update player progression (lifmunks, exp, technologyPoints, ancientTechnologyPoints).')
+    .argument('<playerId>', 'Target Player UID or SteamID')
+    .argument('<json...>', 'JSON object with any of the 4 progression keys')
     .addHelpText('after', `
-The object can contain any of these keys:
-  - lifmunks (Number)
-  - exp (Number)
-  - technologyPoints (Number)
-  - ancientTechnologyPoints (Number)
+The object can contain: lifmunks, exp, technologyPoints, ancientTechnologyPoints.
 
-Example:
-  $ pd-cli giveProgression "PLAYER_ID" '{"exp": 10000, "lifmunks": 10}'
+Example (CMD): 
+  pd-cli giveProgression "ID" "{\\"exp\\": 5000, \\"technologyPoints\\": 10}"
+Example (PS/Linux): 
+  pd-cli giveProgression "ID" '{"exp": 5000, "technologyPoints": 10}'
     `)
     .action((playerId, jsonParts) => handleAction('giveProgression', () => {
-        const inputStr = jsonParts.join(' ');
-        const data = tryParseJson(inputStr);
-
+        const data = tryParseJson(jsonParts);
         if (typeof data !== 'object' || data === null) {
-            throw new Error('Progression data must be a valid JSON object. Example: \'{"exp": 100}\'');
+            throw new Error('Progression data must be a valid JSON object.');
         }
-
         return getClient().giveProgression(playerId, data);
     }));
 
 program
     .command('giveRecipeMaterials')
     .description('Grant all materials needed to craft a specific item.')
-    .argument('<playerId>', 'SteamID or PlayerUID')
-    .argument('<product>', 'Internal Item Name (e.g., PalSphere)')
-    .argument('<quantity>', 'How many sets of materials to give', (val) => parseInt(val))
+    .argument('<playerId>', 'Target Player ID')
+    .argument('<product>', 'Internal Item Name (e.g., PalSphere or MegaSphere)')
+    .argument('<quantity>', 'How many sets of materials to give', (val) => {
+        const parsed = parseInt(val);
+        if (isNaN(parsed)) throw new Error("Quantity must be a valid number.");
+        return parsed;
+    })
+    .addHelpText('after', `
+Example:
+  $ pd-cli giveRecipeMaterials "ID" PalSphere 10
+    `)
     .action((id, prod, qty) => handleAction('giveRecipeMaterials', () => {
-        return getClient().giveRecipeMaterials(id, prod, qty);
+        return getClient().giveRecipeMaterials(id, prod as any, qty);
     }));
 
 program
     .command('learnTech')
-    .description('Instantly unlock a specific technology ID.')
+    .description('Instantly unlock specific technology IDs.')
     .argument('<playerId>', 'SteamID or PlayerUID')
-    .argument('<techId>', 'Internal Tech ID (e.g., Unlock_Sphere_Tier_03)')
-    .action((id, tech) => handleAction('learnTech', () => getClient().learnTech(id, tech)));
+    .argument('<techId...>', 'One or more internal Tech IDs (e.g., Unlock_Sphere_Tier_01)')
+    .addHelpText('after', `
+Example:
+  $ pd-cli learnTech "PLAYER_ID" Unlock_Sphere_Tier_01 Unlock_Sphere_Tier_02
+    `)
+    .action((id, techs) => handleAction('learnTech', () => {
+        return getClient().learnTech(id, ...techs);
+    }));
 
 program
     .command('forgetTech')
-    .description('Lock a technology ID, or use "All" to reset the entire tree.')
+    .description('Lock technology IDs, or reset the entire tree.')
     .argument('<playerId>', 'SteamID or PlayerUID')
-    .argument('<techId>', 'Internal Tech ID or "All"')
-    .action((id, tech) => handleAction('forgetTech', () => getClient().forgetTech(id, tech)));
+    .argument('<techId...>', 'One or more Tech IDs OR use "All" to reset everything')
+    .addHelpText('after', `
+Examples:
+  Lock specific: $ pd-cli forgetTech "PLAYER_ID" Unlock_Sphere_Tier_01
+  Reset all:     $ pd-cli forgetTech "PLAYER_ID" All
+    `)
+    .action((id, techs) => handleAction('forgetTech', () => {
+        return getClient().forgetTech(id, ...techs);
+    }));
 
 program.addHelpText('after', `
 ${chalk.yellow.bold('Note on JSON Arguments:')}

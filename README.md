@@ -4,106 +4,107 @@
 [![license](https://img.shields.io/badge/license-MIT-green)](https://github.com/PalLink/pd-cli-ts/blob/main/LICENSE)
 [![status](https://img.shields.io/badge/status-beta-orange)](#)
 
-A high-performance, type-safe Command Line Interface for managing PalDefender REST API servers. `pd-cli` features dynamic method discovery, allowing it to stay perfectly in sync with the core library automatically.
+A high-performance, type-safe Command Line Interface for managing PalDefender REST API servers. `pd-cli` features a "Hybrid" input system, allowing you to use simple space-separated lists or complex JSON for administrative actions.
 
 ---
 
 ## 📦 Installation
 
-### Option 1: NPM (Recommended for Developers)
-Install the CLI globally to access the `pd-cli` command from anywhere:
-
+### Option 1: NPM (Recommended)
 ```bash
 npm install -g paldefender-cli
 ```
 
 ### Option 2: Standalone Binaries (GitHub Releases)
-If you don't have Node.js installed, download the pre-compiled binary for your OS from the [Releases](https://github.com/PalLink/pd-cli-ts/releases) page:
-- **Windows**: `pd-cli.exe`
-- **Linux**: `pd-cli`
-- **MacOS (Silicon)**: `pd-cli-macos-arm64`
-- **MacOS (Intel)**: `pd-cli-macos-x64`
+Download pre-compiled binaries for [Windows, Linux, or MacOS](https://github.com/PalLink/pd-cli-ts/releases).
+> **Note for Unix (Linux/Mac):** You must run `chmod +x pd-cli` before executing.
 
 ---
 
 ## ⚙️ Configuration
 
-The CLI needs to connect to your PalDefender server. 
-
-### Interactive Setup
-Run this first to securely save your credentials. This avoids needing to set environment variables every session.
-
-```bash
-pd-cli configure
-```
-
-### Connection Testing
-Verify your Host, Port, and Token are working correctly without fetching massive data:
-```bash
-pd-cli test-connection
-```
-
-### Security
-To wipe all stored credentials from your machine:
-```bash
-pd-cli clear-config
-```
+1. **Interactive Setup**: Run `pd-cli configure` to save your host and admin token.
+2. **Connectivity Check**: Run `pd-cli test-connection` to verify your credentials and server status.
+3. **Reset**: Run `pd-cli clear-config` to wipe stored credentials.
 
 ---
 
 ## 🛠 Usage
 
-`pd-cli` uses **Parameter Reflection** to map library functions directly to the terminal.
+### 🔍 Discovery & Lookup
+| Command | Description | Example |
+| :--- | :--- | :--- |
+| `getPlayers` | List all players | `pd-cli getPlayers` |
+| `getGuilds` | List all guilds | `pd-cli getGuilds` |
+| `getPlayer` | Detailed player profile | `pd-cli getPlayer "ID"` |
+| `getPals` | List a player's Pals | `pd-cli getPals "ID"` |
+| `getItems` | View player inventory | `pd-cli getItems "ID"` |
+| `findPlayerByName` | Search by exact name | `pd-cli findPlayerByName "Glitch"` |
 
-### Search for Players
-Find a player's Unique ID using their display name:
+### 🛠 Administrative "Give" Actions
+These commands support **Hybrid Logic**: pass a list of names for quantity 1, or a JSON string for specific counts.
+
+#### Items
 ```bash
-# Partial search (case-insensitive)
-pd-cli findPlayersByPartialName "player"
+# List format (Quantity 1 each)
+pd-cli giveItems "ID" Stone Wood
 
-# Exact match (case-sensitive)
-pd-cli findPlayerByName "GlitchApotamus"
+# JSON format (Specific counts) - Requires "ItemID"
+pd-cli giveItems "ID" '[{"ItemID": "Stone", "Count": 100}]'
 ```
 
-### Managing Items & Pals
-Commands requiring arrays (like `giveItems` or `givePals`) accept JSON strings. **Wrap JSON in single quotes (`'`)** to ensure the shell passes the data correctly.
-
+#### Pals
 ```bash
-# Give items (Accepts GiveItem[])
-pd-cli giveItems "steam_76561198..." 'CopperIngot'
-pd-cli giveItems "steam_76561198..." '[{"ItemID": "CopperIngot", "Count": 15}]'
-pd-cli giveItems "steam_76561198..." '[{"ItemID": "CopperIngot", "Count": 15}]'
+# List format (Level 1)
+pd-cli givePals "ID" Anubis Lamball
 
-# Give a level 50 Anubis
-pd-cli givePals "steam_76561198..." '[{"PalName": "Anubis", "Level": 50}]'
+# JSON format (Specific Level)
+pd-cli givePals "ID" '{"PalName": "Anubis", "Level": 50}'
+```
+
+#### Eggs
+```bash
+# List format
+pd-cli givePalEggs "ID" PalEgg_Dark_01 PalEgg_Fire_05
+
+# JSON format
+pd-cli givePalEggs "ID" '["PalEgg_Dark_05"]'
+```
+
+### 📈 Progression & Tech
+| Command | Example |
+| :--- | :--- |
+| `giveProgression` | `pd-cli giveProgression "ID" '{"EXP": 5000, "Lifmunks": 10, "AncientTechnologyPoints": 2, "TechnologyPoints": 4}'` |
+| `giveRecipeMaterials` | `pd-cli giveRecipeMaterials "ID" PalSphere 5` |
+| `learnTech` | `pd-cli learnTech "ID" Unlock_Sphere_Tier_01` |
+| `forgetTech` | `pd-cli forgetTech "ID" All` (Resets tree) |
+
+---
+
+## 💡 Important: Windows CMD vs PowerShell/Linux
+
+Windows **CMD** does not support single quotes (`'`) for JSON. You must use double quotes and escape the internal quotes with a backslash (`\"`).
+
+**CMD Usage:**
+```cmd
+pd-cli.exe giveItems "ID" "[{\"ItemID\": \"Stone\", \"Count\": 10}]"
+```
+
+**PowerShell / Linux / MacOS Usage:**
+```bash
+pd-cli giveItems "ID" '[{"ItemID": "Stone", "Count": 10}]'
 ```
 
 ---
 
 ## 🚀 Key Features
 
-- **Dynamic Discovery**: New methods added to the `PalDefenderClient` library appear in the CLI automatically.
-- **Smart 401 Handling**: Distinguishes between a server being offline and an invalid admin token.
-- **Persistent Storage**: Uses `conf` to store server details locally so you don't have to re-enter them.
-- **Cross-Platform Binaries**: Native executables available for Windows and Linux (no Node.js required).
-- **Visual Feedback**: Real-time progress spinners and formatted result boxes.
-
----
-
-## ❓ Discovery & Help
-
-To see every command available in the current version:
-```bash
-pd-cli --help
-```
-
-To see the specific parameters required for a dynamic method:
-```bash
-pd-cli givePalEggs --help
-```
+- **Hybrid Input**: Choose between simple string lists or structured JSON.
+- **Auto-Discovery**: CLI stays in sync with the `paldefender-rest-client` library.
+- **Formatted Output**: Results are displayed in clean, readable boxes with status spinners.
+- **No-Node Binaries**: Use the standalone executables if you don't want to install Node.js.
 
 ---
 
 ## 📜 License
-
 MIT © [PalLink](https://github.com/PalLink)
