@@ -10,6 +10,10 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      # Use env to silence warning during workflow
+      # until actions @5 are released in June
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
