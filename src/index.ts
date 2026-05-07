@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import { Command } from 'commander';
-import chalk from 'chalk';
+import * as c from 'colorette';
 import ora from 'ora';
 import boxen from 'boxen';
 import { input } from '@inquirer/prompts';
@@ -11,7 +11,7 @@ import { PalDefenderClient } from 'paldefender-rest-client';
 declare const APP_VERSION: string;
 
 const config = new Conf({ projectName: 'pd-cli' });
-const version = APP_VERSION;
+const version = APP_VERSION || "0.0.0-testing";
 const program = new Command();
 
 const _B = "QWRtaW4gVXRpbGl0eSBieSBHbGl0Y2hBcG90YW11cw==";
@@ -20,7 +20,7 @@ const getAuthor = () => Buffer.from(_B, 'base64').toString();
 function validateIntegrity() {
     const brand = getAuthor();
     if (!brand.includes("GlitchApotamus") || brand.length < 10) {
-        console.error(chalk.red.bold("\n🚨 INTEGRITY ERROR: This binary has been tampered with and is no longer functional."));
+        console.error(c.bold(c.red("\n🚨 INTEGRITY ERROR: This binary has been tampered with and is no longer functional.")));
         process.exit(1);
     }
 }
@@ -32,7 +32,7 @@ function getClient() {
     const port = config.get('port') as string;
 
     if (!token || !host || !port) {
-        console.error(chalk.yellow('\n⚠ Client not configured. Run "pd-cli configure" first.\n'));
+        console.error(c.yellow('\n⚠ Client not configured. Run "pd-cli configure" first.\n'));
         process.exit(1);
     }
 
@@ -58,11 +58,11 @@ const handleAction = async (methodName: string, action: () => Promise<any>) => {
         console.log(boxen(JSON.stringify(result, null, 2), { padding: 0.5, borderColor: 'green' }));
     } catch (error: any) {
         spinner.fail(`API Failure: ${methodName}`);
-        console.error(chalk.red(`✖ Error: ${error.message}`));
+        console.error(c.red(`✖ Error: ${error.message}`));
 
         if (error.message.includes('ItemID')) {
-            console.log(chalk.yellow('\n💡 CMD Hint: ') + chalk.white('On Windows CMD, wrap JSON in double quotes and escape internal quotes:'));
-            console.log(chalk.grey('Example: "[{\\"ItemID\\": \\"Stone\\", \\"Count\\": 1}]"\n'));
+            console.log(c.yellow('\n💡 CMD Hint: ') + c.white('On Windows CMD, wrap JSON in double quotes and escape internal quotes:'));
+            console.log(c.gray('Example: "[{\\"ItemID\\": \\"Stone\\", \\"Count\\": 1}]"\n'));
         }
     }
 };
@@ -73,14 +73,14 @@ program
     .version(version);
 
 const splashText = `
-${chalk.cyan.bold('██████╗ ██████╗       ██████╗██╗     ██╗')}
-${chalk.cyan.bold('██╔══██╗██╔══██╗     ██╔════╝██║     ██║')}
-${chalk.cyan.bold('██████╔╝██║  ██║     ██║     ██║     ██║')}
-${chalk.cyan.bold('██╔═══╝ ██║  ██║     ██║     ██║     ██║')}
-${chalk.cyan.bold('██║     ██████╔╝     ╚██████╗███████╗██║')}
-${chalk.cyan.bold('╚═╝     ╚═════╝       ╚═════╝╚══════╝╚═╝')}
+${c.bold(c.cyan(('██████╗ ██████╗       ██████╗██╗     ██╗')))}
+${c.bold(c.cyan(('██╔══██╗██╔══██╗     ██╔════╝██║     ██║')))}
+${c.bold(c.cyan(('██████╔╝██║  ██║     ██║     ██║     ██║')))}
+${c.bold(c.cyan(('██╔═══╝ ██║  ██║     ██║     ██║     ██║')))}
+${c.bold(c.cyan(('██║     ██████╔╝     ╚██████╗███████╗██║')))}
+${c.bold(c.cyan(('╚═╝     ╚═════╝       ╚═════╝╚══════╝╚═╝')))}
 
-      ${chalk.grey(getAuthor())}
+      ${c.gray(getAuthor())}
 `;
 
 program.addHelpText('before', boxen(splashText, {
@@ -92,7 +92,7 @@ program
     .command('configure')
     .description('Interactively save your server connection details')
     .action(async () => {
-        console.log(chalk.cyan('\n⚙️  Global Configuration Setup\n'));
+        console.log(c.cyan('\n⚙️  Global Configuration Setup\n'));
 
         const token = await input({
             message: 'Enter your PalDefender Admin Token:',
@@ -113,8 +113,8 @@ program
         config.set('host', host);
         config.set('port', port);
 
-        console.log(chalk.green('\n✔ Configuration saved successfully!'));
-        console.log(chalk.grey(`Stored at: ${config.path}\n`));
+        console.log(c.green('\n✔ Configuration saved successfully!'));
+        console.log(c.gray(`Stored at: ${config.path}\n`));
     });
 
 program
@@ -124,9 +124,9 @@ program
         const spinner = ora('Clearing local configuration...').start();
         try {
             config.clear();
-            spinner.succeed(chalk.green('Local configuration wiped successfully.'));
+            spinner.succeed(c.green('Local configuration wiped successfully.'));
         } catch (error: any) {
-            spinner.fail(chalk.red('Failed to clear configuration.'));
+            spinner.fail(c.red('Failed to clear configuration.'));
         }
     });
 
@@ -135,7 +135,7 @@ program
     .description('Verify server connectivity and authentication token')
     .action(async () => {
         const spinner = ora({
-            text: chalk.blue('Verifying connection to PalDefender...'),
+            text: c.blue('Verifying connection to PalDefender...'),
             color: 'cyan'
         }).start();
 
@@ -143,23 +143,23 @@ program
             const testClient = getClient();
             const ver = await testClient.version();
 
-            spinner.succeed(chalk.green('Connection Successful!'));
+            spinner.succeed(c.green('Connection Successful!'));
 
             console.log(boxen(
-                `${chalk.white.bold('PalDefender Version:')} ${chalk.cyan(ver.version_str_long)}\n` +
-                `${chalk.white.bold('Target:')} ${chalk.grey(config.get('host') + ':' + config.get('port'))}`,
+                `${c.bold(c.white('PalDefender Version:'))} ${c.cyan(ver.version_str_long)}\n` +
+                `${c.bold(c.white('Target:'))} ${c.gray(config.get('host') + ':' + config.get('port'))}`,
                 { padding: 1, borderStyle: 'single', borderColor: 'green' }
             ));
 
         } catch (error: any) {
-            spinner.fail(chalk.red(`Connection Failed: ${error.message}`));
+            spinner.fail(c.red(`Connection Failed: ${error.message}`));
 
             if (error.message.includes('status 0')) {
-                console.log(chalk.yellow('\n👉 Note: ') + chalk.white('Ensure your Palworld server is online and Paldefender is installed correctly.'));
-                console.log(chalk.grey('Check that your Host/IP and Port are correct in "pd-cli configure".\n'));
+                console.log(c.yellow('\n👉 Note: ') + c.white('Ensure your Palworld server is online and Paldefender is installed correctly.'));
+                console.log(c.gray('Check that your Host/IP and Port are correct in "pd-cli configure".\n'));
             }
             else if (error.message.includes('401')) {
-                console.log(chalk.yellow('\n👉 Note: ') + chalk.white('Authentication failed. Please verify your Admin Token is correct.'));
+                console.log(c.yellow('\n👉 Note: ') + c.white('Authentication failed. Please verify your Admin Token is correct.'));
             }
         }
     });
@@ -354,8 +354,8 @@ Examples:
     }));
 
 program.addHelpText('after', `
-${chalk.yellow.bold('Note on JSON Arguments:')}
+${c.yellow('Note on JSON Arguments:')}
 When passing JSON (for admin commands), wrap the entire block in single quotes:
-  ${chalk.cyan("pd-cli admin giveProgression \"ID\" '{\"exp\": 100}'")}
+  ${c.cyan("pd-cli giveProgression \"ID\" '{\"exp\": 100}'")}
 `);
 export default program;
