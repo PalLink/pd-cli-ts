@@ -19,6 +19,22 @@ npm install -g paldefender-cli
 Download pre-compiled binaries for [Windows, Linux, or MacOS](https://github.com/PalLink/pd-cli-ts/releases).
 > **Note for Unix (Linux/Mac):** You must run `chmod +x pd-cli` before executing.
 
+### Option 3: Compile Binaries yourself
+Clone this repo and prep (You must have `git, node, and npm` installed on your machine)
+```bash
+git clone https://github.com/PalLink/pd-cli-ts.git
+cd pd-cli-ts
+npm install
+# build
+# Linux:
+./build-bins.sh
+# Windows (Powershell):
+.\build-bins.ps1
+# Windows (CMD):
+build-bins.bat
+```
+You now have a "build" directory with the bins inside. Open it and run the correct one for your system.
+
 ---
 
 ## ⚙️ Configuration
@@ -64,6 +80,7 @@ pd-cli givePals "ID" '{"PalName": "Anubis", "Level": 50}'
 
 #### Eggs
 ```bash
+# You must supply EggID AND either PalID or PalTemplate 
 # List format
 pd-cli givePalEggs "ID" PalEgg_Dark_01 PalEgg_Fire_05
 
